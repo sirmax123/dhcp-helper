@@ -94,10 +94,16 @@ int main(int argc, char **argv)
 {
     int bootrequest_packets_count = 0;
     int bootreply_packets_count = 0;
-    int other_packets_count = 0;
+//    int other_packets_count = 0;
     int all_packets_count = 0;
 
     int fd = -1, oneopt = 1, mtuopt = IP_PMTUDISC_DONT;
+
+//           struct sockaddr {
+//               sa_family_t sa_family;
+//               char        sa_data[14];
+//           }
+
 // https://www.opennet.ru/man.shtml?topic=netdevice&category=7&russian=0
 //struct ifreq {
 //    char            ifr_name[IFNAMSIZ];   /* Имя интерфейса */
@@ -268,14 +274,14 @@ int main(int argc, char **argv)
     struct namelist *tmp1;
     if (input_interfaces_namelist) {
         for (tmp1 = input_interfaces_namelist; tmp1; tmp1 = tmp1->next) {
-            fprintf(stdout, "[INPUT INTERFACES] interface %s in_addr %s \n", tmp1, inet_ntoa(tmp1->addr));
+            fprintf(stdout, "[INPUT INTERFACES] interface %s in_addr %s \n", tmp1->name, inet_ntoa(tmp1->addr));
 
         }
     }
 
     if (dhcp_servers_namelist) {
         for (tmp1 = dhcp_servers_namelist; tmp1; tmp1 = tmp1->next) {
-            fprintf(stdout, "[DHCP SERVERS] server: %s in_addr %s \n", tmp1, inet_ntoa(tmp1->addr));
+            fprintf(stdout, "[DHCP SERVERS] server: %s in_addr %s \n", tmp1->name, inet_ntoa(tmp1->addr));
         }
     } else {
         fprintf(stdout, "dhcp-helper: no destination specifed; give at least -s or -b option.\n");
@@ -326,10 +332,10 @@ int main(int argc, char **argv)
 	        capget(hdr, NULL);
 	        if (hdr->version != LINUX_CAPABILITY_VERSION_1) {
 	            /* if unknown version, use largest supported version (3) */
-		    if (hdr->version != LINUX_CAPABILITY_VERSION_2)
-		        hdr->version = LINUX_CAPABILITY_VERSION_3; {
-                        capsize = 2;
+		    if (hdr->version != LINUX_CAPABILITY_VERSION_2) {
+		        hdr->version = LINUX_CAPABILITY_VERSION_3; 
                     }
+                    capsize = 2;
 	        }
 
                 if ((data = malloc(sizeof(*data) * capsize))) {
@@ -500,8 +506,8 @@ int main(int argc, char **argv)
             all_packets_count = all_packets_count + 1;
 
             fprintf(stdout, "[MAIN %d] Start\n", all_packets_count);
-            fprintf(stdout, "[MAIN %d] msg = %d\n", all_packets_count, msg);
-            fprintf(stdout, "[MAIN %d] message_size = %d\n", all_packets_count, message_size);
+            fprintf(stdout, "[MAIN %d] msg = %p\n", all_packets_count, &msg);
+            fprintf(stdout, "[MAIN %d] message_size = %ld\n", all_packets_count, message_size);
 
 
             // MSG_TRUNC (начиная с Linux 2.2)
@@ -509,28 +515,28 @@ int main(int argc, char **argv)
             // netlink (начиная с Linux 2.6.22) и дейтаграмм UNIX (начиная с Linux 3.4)
             // возвращает реальную длину пакета или дейтаграммы, даже если она была больше,
             // чем предоставленный буфер.
-            fprintf(stdout, "[MAIN %d] message_size = %d\n", all_packets_count, message_size);
+            fprintf(stdout, "[MAIN %d] message_size = %ld\n", all_packets_count, message_size);
             // message_size == -1 - ошибка чтения
             if ( message_size == -1) {
-                fprintf(stdout, "[MAIN %d] message_size = %d Packet read error\n", all_packets_count, message_size);
+                fprintf(stdout, "[MAIN %d] message_size = %ld Packet read error\n", all_packets_count, message_size);
                 break;
             }
 
             // !(msg.msg_flags & MSG_TRUNC) - не (сообщение не влезло в буфер) т е влезло в буфер
             if ( !(msg.msg_flags & MSG_TRUNC) ) {
-                fprintf(stdout, "[MAIN %d] (msg.msg_flags & MSG_TRUNC) = %lX, message is not truncated \n", all_packets_count, (msg.msg_flags & MSG_TRUNC));
+                fprintf(stdout, "[MAIN %d] (msg.msg_flags & MSG_TRUNC) = %d, message is not truncated \n", all_packets_count, (msg.msg_flags & MSG_TRUNC));
                 break;
             }
 
             // тут предпологается что сообщение не влезло в буфер
             new_dhcp_packet_with_opts_buffer_size = dhcp_packet_with_opts_buffer_size + 100;
             new_dhcp_packet_pointer = realloc(current_dhcp_packet_pointer, new_dhcp_packet_with_opts_buffer_size);
-            fprintf(stdout, "[MAIN %d] new_dhcp_packet_pointer = %X\n", all_packets_count, new_dhcp_packet_pointer);
+            fprintf(stdout, "[MAIN %d] new_dhcp_packet_pointer = %p\n", all_packets_count, new_dhcp_packet_pointer);
             // The C library function void *realloc(void *ptr, size_t size) attempts to resize 
             // the memory block pointed to by ptr that was previously allocated with a call to malloc or calloc.
             if  (!(new_dhcp_packet_pointer) ) {
                 // не (смогли выделить большний буффер вместо имевшегося на 100 байт больше)
-                fprintf(stdout, "[MAIN %d] new_dhcp_packet_pointer = %X\n", all_packets_count, new_dhcp_packet_pointer);
+                fprintf(stdout, "[MAIN %d] new_dhcp_packet_pointer = %p\n", all_packets_count, new_dhcp_packet_pointer);
 	        break;
             }
 
@@ -545,7 +551,7 @@ int main(int argc, char **argv)
             iov.iov_len = new_dhcp_packet_with_opts_buffer_size;
             dhcp_packet_with_opts_buffer_size = new_dhcp_packet_with_opts_buffer_size;
 
-            fprintf(stdout, "[MAIN %d] dhcp_packet_with_opts_buffer_size = %X\n", all_packets_count, new_dhcp_packet_with_opts_buffer_size);
+            fprintf(stdout, "[MAIN %d] dhcp_packet_with_opts_buffer_size = %ld\n", all_packets_count, new_dhcp_packet_with_opts_buffer_size);
         }
 
 
@@ -563,12 +569,12 @@ int main(int argc, char **argv)
 
 
         iface_index = 0;
-        fprintf(stderr, "[MAIN %i] msg = %lX\n", all_packets_count, &msg);
+        fprintf(stderr, "[MAIN %i] msg = %p\n", all_packets_count, &msg);
 
         //
         //struct cmsghdr *cmptr;
         for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr)) {
-            fprintf(stderr, "[MAIN %i] cmptr = %X\n", all_packets_count, &cmptr);
+            fprintf(stderr, "[MAIN %i] cmptr = %p\n", all_packets_count, &cmptr);
             fprintf(stderr, "[MAIN %i] cmptr->cmsg_level = %d SOL_IP     = %d\n", all_packets_count, cmptr->cmsg_level, SOL_IP);
             fprintf(stderr, "[MAIN %i] cmptr->cmsg_type =  %d IP_PKTINFO = %d\n", all_packets_count, cmptr->cmsg_type, IP_PKTINFO);
 
@@ -629,13 +635,15 @@ int main(int argc, char **argv)
         /* last ditch loop squashing. */
         fprintf(stderr, "[MAIN %i] current_dhcp_packet_pointer->hops %i \n", all_packets_count, current_dhcp_packet_pointer->hops);
         if ((current_dhcp_packet_pointer->hops++) > 20) {
-            fprintf(stderr, "[MAIN %i] Hops > 20, packet is ignored %i \n", all_packets_count);
+            fprintf(stderr, "[MAIN %i] Hops > 20, packet is ignored\n", all_packets_count);
             continue;
         }
 
-        fprintf(stderr, "[MAIN %i] current_dhcp_packet_pointer->hlen %i , DHCP_CHADDR_MAX = %i \n", all_packets_count, current_dhcp_packet_pointer->hlen, DHCP_CHADDR_MAX);
+        fprintf(stderr, "[MAIN %i] current_dhcp_packet_pointer->hlen %i , DHCP_CHADDR_MAX = %d \n",
+                all_packets_count, current_dhcp_packet_pointer->hlen, DHCP_CHADDR_MAX);
         if (current_dhcp_packet_pointer->hlen > DHCP_CHADDR_MAX) {
-            fprintf(stderr, "[MAIN %i] Size is > $d (DHCP_CHADDR_MAX), packet is ignored %i \n", DHCP_CHADDR_MAX);
+            fprintf(stderr, "[MAIN %i] Size is > %d (DHCP_CHADDR_MAX), packet is ignored \n",
+                    all_packets_count, DHCP_CHADDR_MAX);
             continue;
         }
 
@@ -663,7 +671,8 @@ int main(int argc, char **argv)
                     fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist addr: %s ifr.ifr_name: %s  BREAK\n", bootrequest_packets_count, inet_ntoa(tmp->addr), ifr.ifr_name);
 	            break;
                 } else {
-                    fprintf(stderr, "[BOOTREQUEST %i] (tmp->addr.s_addr == 0 && strncmp(tmp->name, ifr.ifr_name, IF_NAMESIZE) == 0) is FALSE FOR INTERFACE %s\n", bootrequest_packets_count, tmp);
+                    fprintf(stderr, "[BOOTREQUEST %i] (tmp->addr.s_addr == 0 && strncmp(tmp->name, ifr.ifr_name, IF_NAMESIZE) == 0) is FALSE FOR INTERFACE %s\n", 
+                            bootrequest_packets_count, tmp->name);
                 }
             } //for
 
@@ -680,7 +689,7 @@ int main(int argc, char **argv)
             /* check if it came from an allowed interface */
             fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "----check if it came from an allowed interface-----");
 	    for (tmp = except_interfaces_namelist; tmp; tmp = tmp->next) {
-                fprintf(stderr, "[BOOTREQUEST %i] except_interfaces_namelist: %s",bootrequest_packets_count,  except_interfaces_namelist);
+                fprintf(stderr, "[BOOTREQUEST %i] except_interfaces_namelist: %s",bootrequest_packets_count,  except_interfaces_namelist->name);
                 fprintf(stderr, "[BOOTREQUEST %i] except_interfaces_namelist->name = %s  ifr.ifr_name = %s \n", bootrequest_packets_count, tmp->name, ifr.ifr_name);
 	        if (strncmp(tmp->name, ifr.ifr_name, IF_NAMESIZE) == 0) {
                     fprintf(stderr, "[BOOTREQUEST %i] except_interfaces_namelist = %s  BREAK\n", bootrequest_packets_count, tmp->name);
@@ -692,7 +701,7 @@ int main(int argc, char **argv)
             }
 
 	    if (tmp) {
-                fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "tmp (dhcp_servers_namelist in list???) --> continue");
+                fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "tmp (dhcp_servers_namelist in list?) --> continue");
                 continue;
             }
             fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "----check if it came from an allowed interface finished----");
@@ -704,10 +713,12 @@ int main(int argc, char **argv)
 	    if (input_interfaces_namelist) {
                 fprintf(stderr, "[BOOTREQUEST %i] interfaces\n", bootrequest_packets_count);
 	        for (tmp = input_interfaces_namelist; tmp; tmp = tmp->next) {
-                    fprintf(stderr, "[BOOTREQUEST %i] interface %s \n",bootrequest_packets_count, tmp);
+                    fprintf(stderr, "[BOOTREQUEST %i] interface %s \n",bootrequest_packets_count, tmp->name);
 	            if (strncmp(tmp->name, ifr.ifr_name, IF_NAMESIZE) == 0) {
-                        fprintf(stderr, "[BOOTREQUEST %i] interfaces->name = %s  ifr.ifr_name = %s \n", bootrequest_packets_count,  tmp->name, ifr.ifr_name);
-                        fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "strncmp(interfaces->name,  ifr.ifr_name, IF_NAMESIZE) == 0)  == TRUE,  BREAK");
+                        fprintf(stderr, "[BOOTREQUEST %i] interfaces->name = %s  ifr.ifr_name = %s \n",
+                                bootrequest_packets_count,  tmp->name, ifr.ifr_name);
+                        fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count,
+                                "strncmp(interfaces->name,  ifr.ifr_name, IF_NAMESIZE) == 0)  == TRUE,  BREAK");
 		        break;
                     } else {
                         fprintf(stderr, "[BOOTREQUEST %i] input_interfaces_namelist->name = %s  ifr.ifr_name = %s \n", bootrequest_packets_count,  tmp->name, ifr.ifr_name);
@@ -719,7 +730,7 @@ int main(int argc, char **argv)
                     fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "No one interace is met condition ifr.ifr_name in list input_interfaces_namelist --> continue\n");
 	            continue;
                 } else {
-                    fprintf(stderr, "[BOOTREQUEST %i] Request From interface --> %s\n", bootrequest_packets_count, tmp);
+                    fprintf(stderr, "[BOOTREQUEST %i] Request From interface --> %p\n", bootrequest_packets_count, tmp);
                 }
 	    } else {
                 fprintf(stderr, "[BOOTREQUEST %i] NOT input_interfaces_namelist\n", bootrequest_packets_count);
@@ -734,9 +745,11 @@ int main(int argc, char **argv)
             fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "-----already gatewayed ?------");
 	    if (current_dhcp_packet_pointer->giaddr.s_addr) {
 	        /* if so check if by us, to stomp on loops. */
-                fprintf(stderr, "[BOOTREQUEST %i] ifaces  %s current_dhcp_packet_pointer->giaddr.s_addr --> %d \n", bootrequest_packets_count, "if so check if by us, to stomp on loops", current_dhcp_packet_pointer->giaddr.s_addr);
+                fprintf(stderr, "[BOOTREQUEST %i] ifaces  %s current_dhcp_packet_pointer->giaddr.s_addr --> %d \n",
+                        bootrequest_packets_count, "if so check if by us, to stomp on loops", current_dhcp_packet_pointer->giaddr.s_addr);
 	        for (iface = ifaces; iface; iface = iface->next) {
-                    fprintf(stderr, "[BOOTREQUEST %i] ifaces  iface = %lX\n iface->addr.s_addr --> %d current_dhcp_packet_pointer->giaddr.s_addr --> %d \n", bootrequest_packets_count ,iface, iface->addr.s_addr, current_dhcp_packet_pointer->giaddr.s_addr);
+                    fprintf(stderr, "[BOOTREQUEST %i] ifaces  iface = %p\n iface->addr.s_addr --> %d current_dhcp_packet_pointer->giaddr.s_addr --> %d \n",
+                            bootrequest_packets_count ,iface, iface->addr.s_addr, current_dhcp_packet_pointer->giaddr.s_addr);
 	            if (iface->addr.s_addr == current_dhcp_packet_pointer->giaddr.s_addr) {
                         fprintf(stderr, "[BOOTREQUEST %i] ifaces (iface->addr.s_addr == packet->giaddr.s_addr) == TRUE --> BREAK", bootrequest_packets_count);
 		        break;
@@ -756,7 +769,7 @@ int main(int argc, char **argv)
                     fprintf(stderr, "[BOOTREQUEST %i] ioctl(fd, SIOCGIFADDR, &ifr) == -1\n", bootrequest_packets_count);
 	            continue;
                 }
-                fprintf(stderr, "[BOOTREQUEST %i] ifr.ifr_addr -->  %d\n", bootrequest_packets_count, ifr.ifr_addr);
+                fprintf(stderr, "[BOOTREQUEST %i] ifr.ifr_addr -->  %s\n", bootrequest_packets_count, ifr.ifr_addr.sa_data);
 	        iface_addr = current_dhcp_packet_pointer->giaddr = ((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr;
 
                 fprintf(stderr, "[BOOTREQUEST %i] iface_addr (addrress where we got dhcp packet) -->  %s\n", bootrequest_packets_count, inet_ntoa(iface_addr));
@@ -764,7 +777,7 @@ int main(int argc, char **argv)
 	        /* build address->interface index table for returning answers */
                 fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "--build address->interface index table for returning answers--");
 	        for (iface = ifaces; iface; iface = iface->next) {
-                    fprintf(stderr, "[BOOTREQUEST %i] iface:  %lX\n", bootrequest_packets_count, iface);
+                    fprintf(stderr, "[BOOTREQUEST %i] iface:  %p\n", bootrequest_packets_count, iface);
 	            if (iface->addr.s_addr == iface_addr.s_addr) {
 		        iface->index = iface_index;
 		        break;
@@ -774,7 +787,7 @@ int main(int argc, char **argv)
 
 
 	        /* not there, add a new entry */
-                fprintf(stderr, "[BOOTREQUEST %i] %s %s\n", bootrequest_packets_count, "Add a new entry" ,tmp);
+                fprintf(stderr, "[BOOTREQUEST %i] %s %p\n", bootrequest_packets_count, "Add a new entry" ,tmp);
 	        if (!iface && (iface = malloc(sizeof(struct interface)))) {
 		    iface->next = ifaces;
 		    ifaces = iface;
@@ -792,7 +805,7 @@ int main(int argc, char **argv)
 
             fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "-----ifaces structure------");
 	    for (iface = ifaces; iface; iface = iface->next) {
-                fprintf(stderr, "[BOOTREQUEST %i] ifaces: %lX iface->next: %d iface->addr  %s iface->index: %d\n",
+                fprintf(stderr, "[BOOTREQUEST %i] ifaces: %p iface->next: %p iface->addr  %s iface->index: %d\n",
                                 bootrequest_packets_count, iface, iface->next, inet_ntoa(iface->addr), iface->index);
             }
             fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "-----ifaces structure------");
@@ -803,17 +816,18 @@ int main(int argc, char **argv)
 	    for (tmp = dhcp_servers_namelist; tmp; tmp = tmp->next) {
 	        /* Do this each time round to pick up address changes. */
                 fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "Do this each time round to pick up address changes.");
-                fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %s addr.s_addr %d\n", bootrequest_packets_count, tmp, tmp->addr.s_addr);
+                fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %p addr.s_addr %s\n", bootrequest_packets_count, tmp, inet_ntoa(tmp->addr));
 	        if (tmp->addr.s_addr == 0) {
-                    fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %s addr.s_addr == 0\n", bootrequest_packets_count, tmp);
+                    fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %s addr.s_addr == 0\n", bootrequest_packets_count, inet_ntoa(tmp->addr));
 		    strncpy(ifr.ifr_name, tmp->name, IF_NAMESIZE);
 		    if (ioctl(fd, SIOCGIFBRDADDR, &ifr) == -1) {
-                        fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %s ioctl(fd, SIOCGIFBRDADDR, &ifr)  == -1 --> continue\n", bootrequest_packets_count, tmp);
+                        fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %p ioctl(fd, SIOCGIFBRDADDR, &ifr)  == -1 --> continue\n",
+                                bootrequest_packets_count, tmp);
     		        continue;
                     }
 		    dhcp_socket_address.sin_addr = ((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr;
                 } else {
-                    fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %s addr.s_addr != 0\n", bootrequest_packets_count, tmp);
+                    fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %s addr.s_addr != 0\n", bootrequest_packets_count, inet_ntoa(tmp->addr));
 	            dhcp_socket_address.sin_addr = tmp->addr;
                 }
                 //fprintf(stderr, "[BOOTREQUEST %i] dhcp_servers_namelist: %s dhcp_socket_address.sin_addr %d\n", bootrequest_packets_count, dhcp_socket_address.sin_addr);
@@ -850,9 +864,8 @@ int main(int argc, char **argv)
     	    /* look up interface index in cache */
             fprintf(stderr, "[BOOTREPLY %i] %s\n", bootreply_packets_count, "-----ifaces structure------");
 	    for (iface = ifaces; iface; iface = iface->next) {
-                 fprintf(stderr, "[BOOTREPLY %i] iface =  %lX\n" , bootreply_packets_count, iface);
-                 fprintf(stderr, "[BOOTREPLY %i] iface->addr.s_addr =  %d\n" , bootreply_packets_count, iface->addr.s_addr);
-                 fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->giaddr.s_addr =  %d\n" , bootreply_packets_count, current_dhcp_packet_pointer->giaddr.s_addr);
+                 fprintf(stderr, "[BOOTREPLY %i] iface =  %p iface->addr =  %s Relay addr (giaddr) = %s \n",
+                        bootreply_packets_count, iface, inet_ntoa(iface->addr), inet_ntoa(current_dhcp_packet_pointer->giaddr));
             }
             fprintf(stderr, "[BOOTREPLY %i] %s\n", bootreply_packets_count, "-----ifaces structure------");
 
@@ -860,10 +873,6 @@ int main(int argc, char **argv)
             fprintf(stderr, "[BOOTREPLY %i] %s\n" , bootreply_packets_count , "---look up interface index in cache---");
 
 	    for (iface = ifaces; iface; iface = iface->next) {
-                 fprintf(stderr, "[BOOTREPLY %i] iface =  %lX\n" , bootreply_packets_count, iface);
-                 fprintf(stderr, "[BOOTREPLY %i] iface->addr.s_addr =  %d\n" , bootreply_packets_count, iface->addr.s_addr);
-                 fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->giaddr.s_addr =  %d\n" , bootreply_packets_count, current_dhcp_packet_pointer->giaddr.s_addr);
-
                 // giaddr -> relay Address
 	        if (iface->addr.s_addr == current_dhcp_packet_pointer->giaddr.s_addr) {
                     fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->giaddrs  %s  iface->addr %s   --> %s  \n" ,
@@ -876,7 +885,7 @@ int main(int argc, char **argv)
                 fprintf(stderr, "[BOOTREPLY %i] (!iface) - no interface found" , bootreply_packets_count);
 	        continue;
             } else {
-                fprintf(stderr, "[BOOTREPLY %i] found iface %lX current_dhcp_packet_pointer->giaddrs  %s  iface->addr %s \n" ,
+                fprintf(stderr, "[BOOTREPLY %i] found iface %p current_dhcp_packet_pointer->giaddrs  %s  iface->addr %s \n" ,
                         bootreply_packets_count, iface, inet_ntoa(current_dhcp_packet_pointer->giaddr), inet_ntoa(iface->addr));
             }
             fprintf(stderr, "[BOOTREPLY %i] %s\n" , bootreply_packets_count , "---look up interface index in cache finished---");
@@ -887,8 +896,8 @@ int main(int argc, char **argv)
             fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->hlen    %d\n", bootreply_packets_count, current_dhcp_packet_pointer->hlen);
             fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->flags   %d\n", bootreply_packets_count, ntohs(current_dhcp_packet_pointer->flags));
             fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->yiaddr  %s\n", bootreply_packets_count, inet_ntoa(current_dhcp_packet_pointer->yiaddr));
-            fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->ciaddr  %d\n", bootreply_packets_count, inet_ntoa(current_dhcp_packet_pointer->ciaddr));
-            fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->chaddr  %дЧ\n", bootreply_packets_count, current_dhcp_packet_pointer->chaddr);
+            fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->ciaddr  %s\n", bootreply_packets_count, inet_ntoa(current_dhcp_packet_pointer->ciaddr));
+            fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->chaddr  %hhn\n", bootreply_packets_count, current_dhcp_packet_pointer->chaddr);
 
             // ciaddr exist if client already have IP address
             // yiaddr offerd by server
@@ -930,7 +939,8 @@ int main(int argc, char **argv)
                 fprintf(stderr, "[BOOTREPLY %i] ioctl(fd, SIOCGIFNAME, &ifr) = %d\n" ,bootreply_packets_count, ioctl(fd, SIOCGIFNAME, &ifr));
                 // Получить имя интрфейса
 	        if (ioctl(fd, SIOCGIFNAME, &ifr) != -1) {
-                    fprintf(stderr, "[BOOTREPLY %i] found iface %lX, index = %d, name = %s",iface, iface->index, ifr.ifr_name);
+                    fprintf(stderr, "[BOOTREPLY %i] found iface %p, index = %d, name = %s",
+                            bootreply_packets_count, iface, iface->index, ifr.ifr_name);
             	    struct arpreq req;
 	            struct sockaddr *pa = &req.arp_pa;
 		    memcpy(pa, &dhcp_socket_address, sizeof(struct sockaddr_in));
@@ -954,10 +964,10 @@ int main(int argc, char **argv)
                     // send reply
         	    while (sendmsg(fd, &msg, 0) == -1 && errno == EINTR);
 
-                    fprintf(stderr, "[BOOTREPLY %i] sendmsg  %d \n", msg);
+//                    fprintf(stderr, "[BOOTREPLY %i] sendmsg  %#lX \n", bootreply_packets_count, msg);
                     fprintf(stderr, "[BOOTREPLY %i] sendmsg(fd, &msg, 0) == -1 && errno == EINTR); finis\nh" ,bootreply_packets_count);
 	        } else {
-                    fprintf(stderr, "[BOOTREPLY %i] Can't get interface name! for interface %lX\n" ,bootreply_packets_count, iface);
+                    fprintf(stderr, "[BOOTREPLY %i] Can't get interface name! for interface %p\n" ,bootreply_packets_count, iface);
                 }
 	    }
 
