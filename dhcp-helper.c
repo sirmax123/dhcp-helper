@@ -848,17 +848,19 @@ int main(int argc, char **argv)
 
 
     	    /* look up interface index in cache */
-            fprintf(stderr, "[BOOTREPLY %i]  %s\n", bootreply_packets_count, "look up interface index in cache");
+            fprintf(stderr, "[BOOTREPLY %i] %s\n", bootreply_packets_count, "-----ifaces structure------");
 	    for (iface = ifaces; iface; iface = iface->next) {
                  fprintf(stderr, "[BOOTREPLY %i] iface =  %s\n" , bootreply_packets_count, iface);
                  fprintf(stderr, "[BOOTREPLY %i] iface->addr.s_addr =  %d\n" , bootreply_packets_count, iface->addr.s_addr);
                  fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->giaddr.s_addr =  %d\n" , bootreply_packets_count, current_dhcp_packet_pointer->giaddr.s_addr);
             }
-            fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "-----ifaces structure------");
+            fprintf(stderr, "[BOOTREPLY %i] %s\n", bootreply_packets_count, "-----ifaces structure------");
+
 
             fprintf(stderr, "[BOOTREPLY %i] %s\n" , bootreply_packets_count , "---look up interface index in cache---");
+
 	    for (iface = ifaces; iface; iface = iface->next) {
-                 fprintf(stderr, "[BOOTREPLY %i] iface =  %s\n" , bootreply_packets_count, iface);
+                 fprintf(stderr, "[BOOTREPLY %i] iface =  %lX\n" , bootreply_packets_count, iface);
                  fprintf(stderr, "[BOOTREPLY %i] iface->addr.s_addr =  %d\n" , bootreply_packets_count, iface->addr.s_addr);
                  fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->giaddr.s_addr =  %d\n" , bootreply_packets_count, current_dhcp_packet_pointer->giaddr.s_addr);
 
@@ -874,9 +876,8 @@ int main(int argc, char **argv)
                 fprintf(stderr, "[BOOTREPLY %i] (!iface) - no interface found" , bootreply_packets_count);
 	        continue;
             } else {
-                fprintf(stderr, "[BOOTREPLY %i] found iface =  %s \n" , bootreply_packets_count, iface);
-                fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->giaddrs  %s  iface->addr %s \n" ,
-                        bootreply_packets_count, inet_ntoa(current_dhcp_packet_pointer->giaddr), inet_ntoa(iface->addr));
+                fprintf(stderr, "[BOOTREPLY %i] found iface %lX current_dhcp_packet_pointer->giaddrs  %s  iface->addr %s \n" ,
+                        bootreply_packets_count, iface, inet_ntoa(current_dhcp_packet_pointer->giaddr), inet_ntoa(iface->addr));
             }
             fprintf(stderr, "[BOOTREPLY %i] %s\n" , bootreply_packets_count , "---look up interface index in cache finished---");
 
@@ -886,14 +887,15 @@ int main(int argc, char **argv)
             fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->hlen    %d\n", bootreply_packets_count, current_dhcp_packet_pointer->hlen);
             fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->flags   %d\n", bootreply_packets_count, ntohs(current_dhcp_packet_pointer->flags));
             fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->yiaddr  %s\n", bootreply_packets_count, inet_ntoa(current_dhcp_packet_pointer->yiaddr));
-            fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->ciaddr  %d\n", bootreply_packets_count, current_dhcp_packet_pointer->ciaddr);
-            fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->chaddr  %d\n", bootreply_packets_count, current_dhcp_packet_pointer->chaddr);
+            fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->ciaddr  %d\n", bootreply_packets_count, inet_ntoa(current_dhcp_packet_pointer->ciaddr));
+            fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->chaddr  %дЧ\n", bootreply_packets_count, current_dhcp_packet_pointer->chaddr);
 
             // ciaddr exist if client already have IP address
             // yiaddr offerd by server
             // giaddr relay Address
             // siaddr -server address
             //http://www.tcpipguide.com/free/t_DHCPMessageFormat.htm
+
 
 	    if (current_dhcp_packet_pointer->ciaddr.s_addr) {
                 fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->ciaddr.s_addr = %d\n" , bootreply_packets_count, current_dhcp_packet_pointer->ciaddr.s_addr);
@@ -923,35 +925,41 @@ int main(int argc, char **argv)
 	        dhcp_socket_address.sin_addr = current_dhcp_packet_pointer->yiaddr;
                 fprintf(stderr, "[BOOTREPLY %i] dhcp_socket_address.sin_addr (address for client) = %s\n" ,bootreply_packets_count,  inet_ntoa(dhcp_socket_address.sin_addr));
 	        ifr.ifr_ifindex = iface->index;
-                fprintf(stderr, "[BOOTREPLY %i] ifr.ifr_ifinde = %d\n" ,bootreply_packets_count, iface->index);
+                fprintf(stderr, "[BOOTREPLY %i] iface->index  = %d\n" ,bootreply_packets_count, iface->index);
 
                 fprintf(stderr, "[BOOTREPLY %i] ioctl(fd, SIOCGIFNAME, &ifr) = %d\n" ,bootreply_packets_count, ioctl(fd, SIOCGIFNAME, &ifr));
+                // Получить имя интрфейса
 	        if (ioctl(fd, SIOCGIFNAME, &ifr) != -1) {
+                    fprintf(stderr, "[BOOTREPLY %i] found iface %lX, index = %d, name = %s",iface, iface->index, ifr.ifr_name);
             	    struct arpreq req;
 	            struct sockaddr *pa = &req.arp_pa;
 		    memcpy(pa, &dhcp_socket_address, sizeof(struct sockaddr_in));
 		    req.arp_ha.sa_family = current_dhcp_packet_pointer->htype;
-                    fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->htype =  %d \n" , bootreply_packets_count, current_dhcp_packet_pointer->htype);
 		    memcpy(req.arp_ha.sa_data, current_dhcp_packet_pointer->chaddr, current_dhcp_packet_pointer->hlen);
 		    strncpy(req.arp_dev, ifr.ifr_name, 16);
 		    req.arp_flags = ATF_COM;
                     int a;
 		    a = ioctl(fd, SIOCSARP, &req);
                     fprintf(stderr, "[BOOTREPLY %i] ioctl(fd, SIOCSARP, &req); %i \n" , bootreply_packets_count, a);
-	        } else {
-                    fprintf(stderr, "[BOOTREPLY %i] ifr.ifr_ifinde\n" ,bootreply_packets_count);
-                }
-	    }
+
+
                     int status;
                     char iproute_add_command[1024];
                     status = sprintf(iproute_add_command, "/sbin/ip route replace %s dev %s", inet_ntoa(current_dhcp_packet_pointer->yiaddr), ifr.ifr_name);
-//                    status = system(iproute_add_command);
-                    fprintf(stderr,"[BOOTREPLY %i], iproute_add_command: %s status = %d\n",  bootreply_packets_count, iproute_add_command, status);
+                    //status = system(iproute_add_command);
+                    fprintf(stderr,"[BOOTREPLY %i] iproute_add_command: %s status = %d\n",  bootreply_packets_count, iproute_add_command, status);
 
-            fprintf(stderr, "[BOOTREPLY %i] sendmsg(fd, &msg, 0) == -1 && errno == EINTR); start\n" ,bootreply_packets_count);
-	    while (sendmsg(fd, &msg, 0) == -1 && errno == EINTR);
-            fprintf(stderr, "[BOOTREPLY %i] sendmsg  %d \n", msg);
-            fprintf(stderr, "[BOOTREPLY %i] sendmsg(fd, &msg, 0) == -1 && errno == EINTR); finis\nh" ,bootreply_packets_count);
+                    fprintf(stderr, "[BOOTREPLY %i] sendmsg(fd, &msg, 0) == -1 && errno == EINTR); start\n" ,bootreply_packets_count);
+
+                    // send reply
+        	    while (sendmsg(fd, &msg, 0) == -1 && errno == EINTR);
+
+                    fprintf(stderr, "[BOOTREPLY %i] sendmsg  %d \n", msg);
+                    fprintf(stderr, "[BOOTREPLY %i] sendmsg(fd, &msg, 0) == -1 && errno == EINTR); finis\nh" ,bootreply_packets_count);
+	        } else {
+                    fprintf(stderr, "[BOOTREPLY %i] Can't get interface name! for interface %lX\n" ,bootreply_packets_count, iface);
+                }
+	    }
 
         } else {
             fprintf(stderr, "[UNDEFINED??] current_dhcp_packet_pointer->op %i\n", current_dhcp_packet_pointer->op);
