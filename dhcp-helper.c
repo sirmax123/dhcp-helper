@@ -736,7 +736,7 @@ int main(int argc, char **argv)
 	        /* if so check if by us, to stomp on loops. */
                 fprintf(stderr, "[BOOTREQUEST %i] ifaces  %s current_dhcp_packet_pointer->giaddr.s_addr --> %d \n", bootrequest_packets_count, "if so check if by us, to stomp on loops", current_dhcp_packet_pointer->giaddr.s_addr);
 	        for (iface = ifaces; iface; iface = iface->next) {
-                    fprintf(stderr, "[BOOTREQUEST %i] ifaces  iface = %s\n iface->addr.s_addr --> %d current_dhcp_packet_pointer->giaddr.s_addr --> %d \n", bootrequest_packets_count ,iface, iface->addr.s_addr, current_dhcp_packet_pointer->giaddr.s_addr);
+                    fprintf(stderr, "[BOOTREQUEST %i] ifaces  iface = %lX\n iface->addr.s_addr --> %d current_dhcp_packet_pointer->giaddr.s_addr --> %d \n", bootrequest_packets_count ,iface, iface->addr.s_addr, current_dhcp_packet_pointer->giaddr.s_addr);
 	            if (iface->addr.s_addr == current_dhcp_packet_pointer->giaddr.s_addr) {
                         fprintf(stderr, "[BOOTREQUEST %i] ifaces (iface->addr.s_addr == packet->giaddr.s_addr) == TRUE --> BREAK", bootrequest_packets_count);
 		        break;
@@ -764,7 +764,7 @@ int main(int argc, char **argv)
 	        /* build address->interface index table for returning answers */
                 fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "--build address->interface index table for returning answers--");
 	        for (iface = ifaces; iface; iface = iface->next) {
-                    fprintf(stderr, "[BOOTREQUEST %i] iface:  %s\n", bootrequest_packets_count, iface);
+                    fprintf(stderr, "[BOOTREQUEST %i] iface:  %lX\n", bootrequest_packets_count, iface);
 	            if (iface->addr.s_addr == iface_addr.s_addr) {
 		        iface->index = iface_index;
 		        break;
@@ -792,7 +792,7 @@ int main(int argc, char **argv)
 
             fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "-----ifaces structure------");
 	    for (iface = ifaces; iface; iface = iface->next) {
-                fprintf(stderr, "[BOOTREQUEST %i] ifaces: %s iface->next: %d iface->addr  %s iface->index: %d\n",
+                fprintf(stderr, "[BOOTREQUEST %i] ifaces: %lX iface->next: %d iface->addr  %s iface->index: %d\n",
                                 bootrequest_packets_count, iface, iface->next, inet_ntoa(iface->addr), iface->index);
             }
             fprintf(stderr, "[BOOTREQUEST %i] %s\n", bootrequest_packets_count, "-----ifaces structure------");
@@ -850,7 +850,7 @@ int main(int argc, char **argv)
     	    /* look up interface index in cache */
             fprintf(stderr, "[BOOTREPLY %i] %s\n", bootreply_packets_count, "-----ifaces structure------");
 	    for (iface = ifaces; iface; iface = iface->next) {
-                 fprintf(stderr, "[BOOTREPLY %i] iface =  %s\n" , bootreply_packets_count, iface);
+                 fprintf(stderr, "[BOOTREPLY %i] iface =  %lX\n" , bootreply_packets_count, iface);
                  fprintf(stderr, "[BOOTREPLY %i] iface->addr.s_addr =  %d\n" , bootreply_packets_count, iface->addr.s_addr);
                  fprintf(stderr, "[BOOTREPLY %i] current_dhcp_packet_pointer->giaddr.s_addr =  %d\n" , bootreply_packets_count, current_dhcp_packet_pointer->giaddr.s_addr);
             }
